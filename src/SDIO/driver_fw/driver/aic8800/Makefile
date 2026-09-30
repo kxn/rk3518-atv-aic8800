@@ -26,8 +26,8 @@ export CONFIG_PLATFORM_UBUNTU = n
 
 ifeq ($(CONFIG_PLATFORM_ROCKCHIP), y)
 ARCH = arm64
-KDIR = /home/dl/rk3528-a64/src/rk-kernel
-CROSS_COMPILE = /opt/toolchains/crosstools-aarch64-gcc-10.3-linux-4.19-glibc-2.32-binutils-2.36.1/bin/aarch64-buildroot-linux-gnu-
+KDIR ?= /lib/modules/$(shell uname -r)/build
+CROSS_COMPILE ?= aarch64-linux-gnu-
 # ANDROID_PLATFORM cflag intentionally NOT defined: our kernel is stock 6.1.172
 # cfg80211 API (3/5-arg ch_switch notify); ANDROID_PLATFORM selects the RK 5.15
 # backport ABI (4/6-arg) which breaks compilation.
