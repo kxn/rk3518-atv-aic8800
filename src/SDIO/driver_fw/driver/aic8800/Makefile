@@ -18,17 +18,19 @@ export CONFIG_RESV_MEM_SUPPORT = y
 ###################################
 
 ########## Platform support list ##########
-export CONFIG_PLATFORM_ROCKCHIP = n
+export CONFIG_PLATFORM_ROCKCHIP = y
 export CONFIG_PLATFORM_ROCKCHIP2 = n
 export CONFIG_PLATFORM_ALLWINNER = n
 export CONFIG_PLATFORM_AMLOGIC = n
-export CONFIG_PLATFORM_UBUNTU = y
+export CONFIG_PLATFORM_UBUNTU = n
 
 ifeq ($(CONFIG_PLATFORM_ROCKCHIP), y)
 ARCH = arm64
-KDIR = /home/yaya/E/Rockchip/3566/firefly/Android11.0/Firefly-RK356X_Android11.0_git_20210824/RK356X_Android11.0/kernel
-CROSS_COMPILE = /home/yaya/E/Rockchip/3566/firefly/Android11.0/Firefly-RK356X_Android11.0_git_20210824/RK356X_Android11.0/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
-ccflags-y += -DANDROID_PLATFORM
+KDIR = /home/dl/rk3528-a64/src/rk-kernel
+CROSS_COMPILE = /opt/toolchains/crosstools-aarch64-gcc-10.3-linux-4.19-glibc-2.32-binutils-2.36.1/bin/aarch64-buildroot-linux-gnu-
+# ANDROID_PLATFORM cflag intentionally NOT defined: our kernel is stock 6.1.172
+# cfg80211 API (3/5-arg ch_switch notify); ANDROID_PLATFORM selects the RK 5.15
+# backport ABI (4/6-arg) which breaks compilation.
 ccflags-y += -DCONFIG_PLATFORM_ROCKCHIP
 endif
 

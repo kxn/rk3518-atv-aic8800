@@ -5648,9 +5648,11 @@ extern int get_wifi_custom_mac_address(char *addr_str);
 
 #ifdef CONFIG_PLATFORM_ROCKCHIP
 #include <linux/rfkill-wlan.h>
+#include <asm/system_info.h>
 #endif
 #ifdef CONFIG_PLATFORM_ROCKCHIP2
 #include <linux/rfkill-wlan.h>
+#include <asm/system_info.h>
 #endif
 
 
@@ -5827,7 +5829,7 @@ int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
 	u8 addr_str[20];
 	//struct mm_set_rf_calib_cfm cfm;
 	struct mm_get_fw_version_cfm fw_version;
-	u8_l mac_addr_efuse[ETH_ALEN];
+	u8_l mac_addr_efuse[ETH_ALEN] = { 0 };
 	struct aicbsp_feature_t feature;
 	struct mm_set_stack_start_cfm set_start_cfm;
 #ifdef CONFIG_TEMP_COMP
@@ -5841,7 +5843,6 @@ int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
 	memset(fw_path, 0, 200);
 	aicbsp_get_feature(&feature, fw_path);
 
-	get_random_bytes(&dflt_mac[4], 2);
 #ifdef CONFIG_POWER_LIMIT
 	memcpy(country_code, default_ccode, 4);
 #endif
@@ -6087,26 +6088,41 @@ int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
 
 #ifdef CONFIG_USE_CUSTOMER_MAC
     ret = rwnx_get_custom_mac_addr(mac_addr_efuse);
-	if (ret){
-        AICWFDBG(LOGERROR, "%s read mac fail use default mac\r\n", __func__);
-        memcpy(init_conf.mac_addr, dflt_mac, ETH_ALEN);
+    if (ret || !is_valid_ether_addr(mac_addr_efuse)) {
+        /* Some boards leave vendor storage blank but program the AIC OTP. */
+        memset(mac_addr_efuse, 0, ETH_ALEN);
+        ret = rwnx_send_get_macaddr_req(rwnx_hw,
+                    (struct mm_get_mac_addr_cfm *)mac_addr_efuse);
+        if (ret)
+            memset(mac_addr_efuse, 0, ETH_ALEN);
     }
 #else
-	ret = rwnx_send_get_macaddr_req(rwnx_hw, (struct mm_get_mac_addr_cfm *)mac_addr_efuse);
-	if (ret)
-		goto err_lmac_reqs;
+    ret = rwnx_send_get_macaddr_req(rwnx_hw,
+                (struct mm_get_mac_addr_cfm *)mac_addr_efuse);
+    if (ret)
+        memset(mac_addr_efuse, 0, ETH_ALEN);
 #endif
-
-	if (mac_addr_efuse[0] | mac_addr_efuse[1] | mac_addr_efuse[2] | mac_addr_efuse[3]) {
-		memcpy(init_conf.mac_addr, mac_addr_efuse, ETH_ALEN);
-	}else{
+    if (is_valid_ether_addr(mac_addr_efuse)) {
+        memcpy(init_conf.mac_addr, mac_addr_efuse, ETH_ALEN);
+    } else {
+        /* Only require a SoC identity when both factory sources are blank.
+         * A valid factory address must not depend on the fallback source. */
+        if (!(system_serial_high | system_serial_low)) {
+            pr_err("aic8800: no factory MAC or stable SoC identity\n");
+            ret = -ENODATA;
+            goto err_lmac_reqs;
+        }
+        dflt_mac[0] = 0x02;
+        dflt_mac[1] = (system_serial_high >> 8) & 0xff;
+        dflt_mac[2] = system_serial_high & 0xff;
+        dflt_mac[3] = (system_serial_low >> 16) & 0xff;
+        dflt_mac[4] = (system_serial_low >> 8) & 0xff;
+        dflt_mac[5] = system_serial_low & 0xff;
         memcpy(init_conf.mac_addr, dflt_mac, ETH_ALEN);
+        pr_info("aic8800: blank factory MAC, using stable SoC MAC %pM\n",
+                init_conf.mac_addr);
     }
-
-
-	AICWFDBG(LOGINFO, "get macaddr: %02x:%02x:%02x:%02x:%02x:%02x\r\n",
-			mac_addr_efuse[0], mac_addr_efuse[1], mac_addr_efuse[2],
-			mac_addr_efuse[3], mac_addr_efuse[4], mac_addr_efuse[5]);
+    pr_info("aic8800: selected Wi-Fi MAC %pM\n", init_conf.mac_addr);
 	memcpy(wiphy->perm_addr, init_conf.mac_addr, ETH_ALEN);
 
 	/* Reset FW */

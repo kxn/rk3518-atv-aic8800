@@ -98,7 +98,7 @@ BR_NAME = br0
 CONFIG_FDRV_NO_REG_SDIO=n
 CONFIG_SCHED_SCAN = n
 CONFIG_OOB ?= n
-CONFIG_USE_CUSTOMER_MAC = n
+CONFIG_USE_CUSTOMER_MAC = y
 CONFIG_PREALLOC_TXQ ?= y
 CONFIG_DPD = y
 CONFIG_FORCE_DPD_CALIB = y
@@ -371,7 +371,7 @@ ARCH := arm64
 KDIR ?= /home/yaya/E/Rockchip/3566/firefly/Android11.0/Firefly-RK356X_Android11.0_git_20210824/RK356X_Android11.0/kernel
 CROSS_COMPILE := /home/yaya/E/Rockchip/3566/firefly/Android11.0/Firefly-RK356X_Android11.0_git_20210824/RK356X_Android11.0/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 ccflags-$(CONFIG_PLATFORM_ROCKCHIP) += -DCONFIG_PLATFORM_ROCKCHIP
-ccflags-y += -DANDROID_PLATFORM
+# ANDROID_PLATFORM dropped: stock 6.1 cfg80211 ABI (see top Makefile)
 endif
 
 ifeq ($(CONFIG_PLATFORM_ROCKCHIP2), y)
